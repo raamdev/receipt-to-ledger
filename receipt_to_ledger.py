@@ -338,7 +338,11 @@ def main():
         while True:
             processed = load_processed()
             for pdf in sorted(WATCH_FOLDER.glob("*.pdf")):
-                fhash = file_hash(pdf)
+                try:
+                    fhash = file_hash(pdf)
+                except Exception as e:
+                    log.warning(f"  Could not hash {pdf.name}, will retry: {e}")
+                    continue
                 if fhash not in processed and fhash not in queued:
                     log.info(f"  Found unprocessed file: {pdf.name}")
                     queued.add(fhash)

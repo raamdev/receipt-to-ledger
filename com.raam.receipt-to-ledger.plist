@@ -10,7 +10,7 @@
     <array>
         <!-- Update this path to wherever you installed the venv -->
         <string>/Users/raam/.venvs/receipt-to-ledger/bin/python</string>
-        <string>/Users/raam/scripts/receipt_to_ledger.py</string>
+        <string>/Users/raam/Projects/Personal/receipt-to-ledger/receipt_to_ledger.py</string>
     </array>
 
     <!-- API key and paths are read from ~/.receipt-to-ledger.conf — nothing sensitive here -->

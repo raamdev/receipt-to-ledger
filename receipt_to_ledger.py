@@ -20,8 +20,6 @@ import queue
 import threading
 
 import anthropic
-from watchdog.observers import Observer
-from watchdog.events import FileSystemEventHandler
 
 # ── CONFIG ────────────────────────────────────────────────────────────────────
 
@@ -171,7 +169,7 @@ def mark_processed(identifier: str):
         f.write(identifier + "\n")
 
 
-def wait_for_stable(path: Path, stable_seconds: float = 2.0, timeout: float = 30.0):
+def wait_for_stable(path: Path, stable_seconds: float = 0.5, timeout: float = 30.0):
     """Wait until a file stops growing (Dropbox may still be syncing)."""
     deadline = time.time() + timeout
     last_size = -1
@@ -235,12 +233,6 @@ def process_receipt(pdf_path: Path):
         return
 
     entry = response.content[0].text.strip()
-    # Strip markdown code fences if the model includes them despite instructions
-    if entry.startswith("```"):
-        entry = "\n".join(entry.splitlines()[1:])
-    if entry.endswith("```"):
-        entry = "\n".join(entry.splitlines()[:-1])
-    entry = entry.strip()
 
     if entry == "NOT_A_RECEIPT":
         log.warning(f"  Not a receipt, skipping: {pdf_path.name}")
@@ -259,10 +251,15 @@ def process_receipt(pdf_path: Path):
     log.info(f"  Entry:\n{entry}")
 
 
-# ── WATCHDOG HANDLER ──────────────────────────────────────────────────────────
+# ── POLLING LOOP ──────────────────────────────────────────────────────────────
 
-# Processing happens on a worker thread so the watchdog event handler returns
-# immediately and never misses a subsequent file system event.
+# Watchdog relies on FSEvents, which Dropbox's sync mechanism doesn't always
+# trigger reliably on macOS. A simple polling loop is more robust for this use case.
+
+POLL_INTERVAL = 3  # seconds between scans
+
+# Processing happens on a worker thread so the polling loop is never blocked
+# waiting for a file to stabilise or for the Claude API to respond.
 _receipt_queue: queue.Queue = queue.Queue()
 
 def _worker():
@@ -279,23 +276,6 @@ def _worker():
             _receipt_queue.task_done()
 
 
-class ReceiptHandler(FileSystemEventHandler):
-    def on_created(self, event):
-        if event.is_directory:
-            return
-        path = Path(event.src_path)
-        if path.suffix.lower() == ".pdf":
-            _receipt_queue.put(path)
-
-    def on_moved(self, event):
-        # Dropbox sometimes writes to a temp file then renames
-        if event.is_directory:
-            return
-        path = Path(event.dest_path)
-        if path.suffix.lower() == ".pdf":
-            _receipt_queue.put(path)
-
-
 # ── MAIN ──────────────────────────────────────────────────────────────────────
 
 def main():
@@ -303,31 +283,28 @@ def main():
         log.error(f"Watch folder does not exist: {WATCH_FOLDER}")
         sys.exit(1)
 
-    # Start the worker thread
     worker_thread = threading.Thread(target=_worker, daemon=True)
     worker_thread.start()
 
-    # Catch up on any PDFs that arrived while the script wasn't running
-    log.info(f"Checking for unprocessed PDFs in {WATCH_FOLDER} ...")
-    processed = load_processed()
-    for pdf in sorted(WATCH_FOLDER.glob("*.pdf")):
-        if file_hash(pdf) not in processed:
-            log.info(f"  Found unprocessed file: {pdf.name}")
-            _receipt_queue.put(pdf)
+    log.info(f"Watching {WATCH_FOLDER} for new PDFs (polling every {POLL_INTERVAL}s) ...")
 
-    observer = Observer()
-    observer.schedule(ReceiptHandler(), str(WATCH_FOLDER), recursive=False)
-    observer.start()
-    log.info(f"Watching {WATCH_FOLDER} for new PDFs ...")
+    # Track which files have been queued this session to avoid re-queuing
+    # a file that's still sitting in the folder while its worker job runs.
+    queued: set = set()
 
     try:
         while True:
-            time.sleep(5)
+            processed = load_processed()
+            for pdf in sorted(WATCH_FOLDER.glob("*.pdf")):
+                fhash = file_hash(pdf)
+                if fhash not in processed and fhash not in queued:
+                    log.info(f"  Found unprocessed file: {pdf.name}")
+                    queued.add(fhash)
+                    _receipt_queue.put(pdf)
+            time.sleep(POLL_INTERVAL)
     except KeyboardInterrupt:
-        observer.stop()
         _receipt_queue.put(None)       # signal worker to exit cleanly
         worker_thread.join()
-    observer.join()
 
 
 if __name__ == "__main__":

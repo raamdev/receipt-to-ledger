@@ -1,0 +1,11 @@
+# Never commit the local config (contains API key and personal paths)
+.receipt-to-ledger.conf
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+*.egg-info/
+
+# macOS
+.DS_Store

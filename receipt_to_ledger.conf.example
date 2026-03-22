@@ -11,6 +11,10 @@ watch_folder          = ~/Dropbox/Receipts
 processed_folder      = ~/Dropbox/Receipts/Processed
 ledger_file           = ~/Dropbox/finances.ledger
 
+# Path to your ledger-cli accounts file (see accounts.example)
+# Liabilities:* accounts in this file are passed to Claude to match against vendors
+accounts_file         = ~/Dropbox/accounts.ledger
+
 # Path to your invoice mappings file (see invoice_mappings.example)
 # Optional — omit or leave blank if you don't use invoice mappings
 invoice_mappings_file = ~/Dropbox/invoice_mappings.txt
@@ -18,3 +22,7 @@ invoice_mappings_file = ~/Dropbox/invoice_mappings.txt
 # Optional — these defaults are fine for most setups:
 # processed_log = ~/.receipt-to-ledger-processed
 # log_file      = ~/logs/receipt_to_ledger.log
+
+[accounts]
+# Fallback account used when no liability account matches the vendor
+default_account = Assets:Checking

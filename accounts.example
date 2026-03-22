@@ -1,0 +1,29 @@
+; accounts.example
+;
+; This is a standard ledger-cli accounts file. Receipt to Ledger reads the
+; Liabilities:* accounts from this file and passes them to Claude to match
+; against vendor names on receipts.
+;
+; You likely already have an accounts file for your ledger setup — just point
+; accounts_file in your config to that file. Receipt to Ledger ignores
+; everything except Liabilities:* account lines.
+
+account Assets:Checking
+account Assets:Savings
+
+account Liabilities:Home-Depot
+account Liabilities:Lowes
+account Liabilities:Hammond-Lumber
+account Liabilities:Floor-and-Decor
+
+account Expenses:Materials
+account Expenses:Tools
+account Expenses:Fuel
+account Expenses:Office
+account Expenses:Software
+account Expenses:Meals
+account Expenses:Travel
+account Expenses:Permits
+account Expenses:Miscellaneous
+
+account Income:Services

@@ -52,6 +52,13 @@ LOG_FILE                = expand(cfg.get("paths", "log_file",
 _invoice_mappings_raw   = cfg.get("paths", "invoice_mappings_file", fallback="")
 INVOICE_MAPPINGS_FILE   = expand(_invoice_mappings_raw) if _invoice_mappings_raw else None
 
+# Accounts file is optional but recommended
+_accounts_file_raw      = cfg.get("paths", "accounts_file", fallback="")
+ACCOUNTS_FILE           = expand(_accounts_file_raw) if _accounts_file_raw else None
+
+DEFAULT_ACCOUNT         = cfg.get("accounts", "default_account",
+                                   fallback="Assets:Checking")
+
 # ── LOGGING ──────────────────────────────────────────────────────────────────
 
 LOG_FILE.parent.mkdir(parents=True, exist_ok=True)
@@ -67,7 +74,41 @@ log = logging.getLogger("receipt-to-ledger")
 
 # ── PROMPT ────────────────────────────────────────────────────────────────────
 
-SYSTEM_PROMPT = """\
+def load_liability_accounts() -> list[str]:
+    """
+    Parse the accounts file and return all Liabilities:* account names.
+    Returns an empty list if no file is configured or the file doesn't exist.
+    """
+    if not ACCOUNTS_FILE:
+        return []
+    if not ACCOUNTS_FILE.exists():
+        log.warning(f"Accounts file not found: {ACCOUNTS_FILE}")
+        return []
+    accounts = []
+    for line in ACCOUNTS_FILE.read_text().splitlines():
+        line = line.strip()
+        if line.startswith("account Liabilities:"):
+            accounts.append(line[len("account "):])
+    return accounts
+
+
+def build_system_prompt() -> str:
+    """Build the system prompt, incorporating liability accounts and default account from config."""
+    liability_accounts = load_liability_accounts()
+
+    if liability_accounts:
+        accounts_list = "\n".join(f"  {a}" for a in liability_accounts)
+        accounts_section = (
+            f"Credit the appropriate liability account based on the vendor name.\n"
+            f"Match the vendor name to the most likely account from this list:\n"
+            f"{accounts_list}\n"
+            f"If no liability account is a reasonable match for the vendor, "
+            f"debit {DEFAULT_ACCOUNT} instead."
+        )
+    else:
+        accounts_section = f"If no liability account can be determined, debit {DEFAULT_ACCOUNT}."
+
+    return f"""\
 You are a bookkeeping assistant that converts retail receipts into Ledger-CLI journal entries. Follow these rules exactly:
 
 Format:
@@ -82,12 +123,7 @@ For returns, use negative amounts on Expenses:Materials and a positive amount on
 
 Accounts:
 All purchased items go to Expenses:Materials
-Credit the appropriate liability account based on vendor:
-Home Depot → Liabilities:Home-Depot
-Lowe's → Liabilities:Lowes
-Hammond Lumber -> Liabilities:Hammond-Lumber
-Homeport Supply -> Liabilities:Homeport
-If the vendor does not match one of the above, then default to debiting Assets:Chase-Checking-3561
+{accounts_section}
 
 Tax:
 Maine sales tax (5.5%) is folded into each line item amount — do not record it as a separate posting
@@ -220,7 +256,7 @@ def process_receipt(pdf_path: Path):
         response = client.messages.create(
             model="claude-opus-4-5",
             max_tokens=1024,
-            system=SYSTEM_PROMPT,
+            system=build_system_prompt(),
             messages=[
                 {
                     "role": "user",

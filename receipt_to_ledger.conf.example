@@ -1,0 +1,20 @@
+# receipt_to_ledger.conf.example
+#
+# Copy this file to ~/.receipt-to-ledger.conf and fill in your values.
+# That file lives outside the repo and is never committed.
+
+[anthropic]
+api_key = sk-ant-YOUR_KEY_HERE
+
+[paths]
+watch_folder          = ~/Dropbox/Receipts
+processed_folder      = ~/Dropbox/Receipts/Processed
+ledger_file           = ~/Dropbox/finances.ledger
+
+# Path to your invoice mappings file (see invoice_mappings.example)
+# Optional — omit or leave blank if you don't use invoice mappings
+invoice_mappings_file = ~/Dropbox/invoice_mappings.txt
+
+# Optional — these defaults are fine for most setups:
+# processed_log = ~/.receipt-to-ledger-processed
+# log_file      = ~/logs/receipt_to_ledger.log

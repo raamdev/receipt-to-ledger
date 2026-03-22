@@ -1,0 +1,27 @@
+# invoice_mappings.example
+#
+# Maps client names (as they appear in receipt filenames) to invoice descriptions.
+# Copy or adapt this file to wherever invoice_mappings_file points in your config.
+#
+# Format:  Client: Invoice description
+#
+# The client name must match exactly what appears in the receipt filename between
+# the vendor and the .pdf extension:
+#   "2026-03-16 Lowes - Birch.pdf"  →  client is "Birch"
+#
+# Lines starting with # are comments and are ignored.
+# Blank lines are ignored.
+#
+# Each client should have at most one active entry — comment out old entries
+# rather than deleting them so you keep a record.
+
+# ── Active ────────────────────────────────────────────────────────────────────
+
+Birch: Invoice 0000348 - 43 Birch Rd
+Appalachee: Invoice 0000351 - 89 Appalachee Rd
+Wiscasset: Invoice 0000355 - 550 Wiscasset Rd
+
+# ── Completed (keep for reference) ───────────────────────────────────────────
+
+# Harbor: Invoice 0000312 - 14 Harbor View Ln
+# Pine: Invoice 0000329 - 7 Pine St

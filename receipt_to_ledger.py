@@ -233,6 +233,12 @@ def process_receipt(pdf_path: Path):
         return
 
     entry = response.content[0].text.strip()
+    # Strip markdown code fences if the model includes them despite instructions
+    if entry.startswith("```"):
+        entry = "\n".join(entry.splitlines()[1:])
+    if entry.endswith("```"):
+        entry = "\n".join(entry.splitlines()[:-1])
+    entry = entry.strip()
 
     if entry == "NOT_A_RECEIPT":
         log.warning(f"  Not a receipt, skipping: {pdf_path.name}")

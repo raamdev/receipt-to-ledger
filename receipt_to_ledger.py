@@ -119,7 +119,7 @@ Two spaces minimum between account and amount (align amounts)
 Inline comments for each line item using ;;
 Always include a dollar sign ($) for amounts.
 If an amount is negative, format it with the minus after the dollar sign (e.g., $-10.00).
-For returns, use negative amounts on Expenses:Materials and a positive amount on the liability account
+For returns, use negative amounts on Expenses:Materials and a positive amount on the liability account, and add the word 'RETURN' to the end of the Vendor Name.
 
 Accounts:
 All purchased items go to Expenses:Materials
